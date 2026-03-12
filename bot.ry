@@ -1,0 +1,168 @@
+import json
+import os
+from datetime import datetime
+
+FILE_NAME = "finance_data.json"
+
+# ------------------- Робота з файлом -------------------
+
+def load_data():
+    if not os.path.exists(FILE_NAME):
+        return {"budget": 0, "expenses": []}
+    with open(FILE_NAME, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+def save_data(data):
+    with open(FILE_NAME, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=4, ensure_ascii=False)
+
+data = load_data()
+
+# ------------------- Команди -------------------
+
+def help_command():
+    print("\nДоступні команди:")
+    print("допомога - список команд")
+    print("встановити бюджет - задати бюджет")
+    print("додати витрату - додати нову витрату")
+    print("показати витрати - список усіх витрат")
+    print("фільтр дата - витрати за конкретну дату")
+    print("фільтр період - витрати між двома датами")
+    print("фільтр категорія - витрати за категорією")
+    print("залишок - залишок бюджету")
+    print("звіт за категоріями - підсумок витрат по категоріях")
+    print("вийти - завершити програму\n")
+
+def set_budget():
+    try:
+        budget = float(input("Введіть бюджет: "))
+        data["budget"] = budget
+        save_data(data)
+        print("Бюджет встановлено:", budget)
+    except:
+        print("Помилка введення.")
+
+def add_expense():
+    try:
+        amount = float(input("Сума: "))
+        category = input("Категорія: ")
+        date = input("Дата (YYYY-MM-DD): ")
+        comment = input("Коментар (необов'язково): ")
+
+        expense = {
+            "amount": amount,
+            "category": category,
+            "date": date,
+            "comment": comment
+        }
+
+        data["expenses"].append(expense)
+        save_data(data)
+
+        print("Витрату додано.")
+
+        check_budget()
+
+    except:
+        print("Помилка введення.")
+
+def show_expenses(expenses=None):
+    if expenses is None:
+        expenses = data["expenses"]
+
+    if not expenses:
+        print("Немає витрат.")
+        return
+
+    print("\nСписок витрат:")
+    for e in expenses:
+        print(f"{e['date']} | {e['category']} | {e['amount']} | {e['comment']}")
+    print()
+
+def filter_by_date():
+    date = input("Введіть дату (YYYY-MM-DD): ")
+    filtered = [e for e in data["expenses"] if e["date"] == date]
+    show_expenses(filtered)
+
+def filter_by_period():
+    start = input("Початкова дата (YYYY-MM-DD): ")
+    end = input("Кінцева дата (YYYY-MM-DD): ")
+
+    start = datetime.strptime(start, "%Y-%m-%d")
+    end = datetime.strptime(end, "%Y-%m-%d")
+
+    filtered = []
+    for e in data["expenses"]:
+        d = datetime.strptime(e["date"], "%Y-%m-%d")
+        if start <= d <= end:
+            filtered.append(e)
+
+    show_expenses(filtered)
+
+def filter_by_category():
+    category = input("Категорія: ")
+    filtered = [e for e in data["expenses"] if e["category"] == category]
+    show_expenses(filtered)
+
+def remaining_budget():
+    total = sum(e["amount"] for e in data["expenses"])
+    remaining = data["budget"] - total
+    print("Залишок бюджету:", remaining)
+
+def check_budget():
+    total = sum(e["amount"] for e in data["expenses"])
+    if total > data["budget"]:
+        print("⚠ УВАГА! Бюджет перевищено!")
+
+def category_report():
+    report = {}
+    for e in data["expenses"]:
+        cat = e["category"]
+        report[cat] = report.get(cat, 0) + e["amount"]
+
+    print("\nЗвіт за категоріями:")
+    for cat, amount in report.items():
+        print(cat, ":", amount)
+    print()
+
+# ------------------- Основна програма -------------------
+
+print("Вітаю! Це бот для обліку витрат.")
+print("Введіть 'допомога', щоб побачити список команд.\n")
+
+while True:
+    command = input(">> ").lower()
+
+    if command == "допомога":
+        help_command()
+
+    elif command == "встановити бюджет":
+        set_budget()
+
+    elif command == "додати витрату":
+        add_expense()
+
+    elif command == "показати витрати":
+        show_expenses()
+
+    elif command == "фільтр дата":
+        filter_by_date()
+
+    elif command == "фільтр період":
+        filter_by_period()
+
+    elif command == "фільтр категорія":
+        filter_by_category()
+
+    elif command == "залишок":
+        remaining_budget()
+
+    elif command == "звіт за категоріями":
+        category_report()
+
+    elif command == "вийти":
+        print("Завершення роботи.")
+        break
+
+    else:
+        print("Невідома команда. Введіть 'допомога'.")
